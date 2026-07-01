@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>독서통장</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="독서통장">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237B9FE8'/><text y='.9em' font-size='80' x='10'>📚</text></svg>">
+  <meta name="theme-color" content="#7B9FE8">
+  <style>
+    :root {
+      --sky: #7B9FE8;
+      --purple: #A78BFA;
+      --sky-light: #EEF3FD;
+      --purple-light: #EDE9FE;
+      --sky-dark: #4A6FBF;
+      --purple-dark: #6D28D9;
+      --text: #1a1a2e;
+      --text-sub: #6b7280;
+      --text-muted: #9ca3af;
+      --bg: #f8f9fc;
+      --surface: #ffffff;
+      --surface2: #f3f4f6;
+      --border: #e5e7eb;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 0;
+    }
+    .app {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* 헤더 */
+    .header {
+      background: linear-gradient(135deg, var(--sky) 0%, var(--purple) 100%);
+      padding: 52px 20px 20px;
+      text-align: center;
+    }
+    .header h1 { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .header p { font-size: 13px; color: rgba(255,255,255,0.85); }
+
+    /* 탭 콘텐츠 */
+    .content { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 80px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* 공통 섹션 제목 */
+    .section-title {
+      font-size: 13px; font-weight: 600; color: var(--text-sub);
+      margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* 통계 카드 */
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 4px; }
+    .stat-card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 14px 12px; border: 1px solid var(--border);
+    }
+    .stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .stat-value { font-size: 24px; font-weight: 700; color: var(--sky); }
+    .stat-unit { font-size: 13px; font-weight: 400; color: var(--text-sub); }
+
+    /* 안내 카드 */
+    .guide-card {
+      background: var(--surface); border-radius: var(--radius);
+      padding: 14px; margin-bottom: 10px;
+      display: flex; align-items: flex-start; gap: 12px;
+      border: 1px solid var(--border);
+    }
+    .guide-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--purple); color: #fff;
+      font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .guide-text strong { font-size: 14px; font-weight: 600; color: var(--text); display: block; margin-bottom: 2px; }
+    .guide-text span { font-size: 12px; color: var(--text-sub); }
+
+    /* 스캔 탭 */
+    .scan-area {
+      background: var(--sky-light); border-radius: var(--radius);
+      padding: 28px 16px; text-align: center;
+      border: 2px dashed var(--sky); margin-bottom: 16px; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .scan-area:active { background: #dde9fa; }
+    .scan-icon { font-size: 44px; margin-bottom: 8px; }
+    .scan-label { font-size: 15px; font-weight: 600; color: var(--sky-dark); margin-bottom: 4px; }
+    .scan-sub { font-size: 12px; color: var(--sky); }
+
+    /* 책 카드 */
+    .book-card {
+      background: var(--surface); border-radius: var(--radius);
+      border: 1px solid var(--border); padding: 14px;
+      margin-bottom: 10px; display: flex; gap: 12px; align-items: center;
+    }
+    .book-cover {
+      width: 42px; height: 58px; background: var(--purple-light);
+      border-radius: 4px; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; font-size: 22px;
+    }
+    .book-info .book-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .book-info .book-meta { font-size: 12px; color: var(--text-sub); }
+    .book-info .book-date { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* 캘린더 */
+    .cal-nav-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cal-title-text { font-size: 16px; font-weight: 600; color: var(--text); }
+    .cal-btn {
+      width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); font-size: 16px; color: var(--text-sub);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 16px; }
+    .cal-day-name { font-size: 11px; color: var(--text-muted); text-align: center; padding: 4px 0; font-weight: 600; }
+    .cal-day {
+      font-size: 12px; color: var(--text-sub); text-align: center;
+      padding: 6px 2px; border-radius: 8px; cursor: pointer; position: relative;
+    }
+    .cal-day.has-book { background: var(--purple-light); color: var(--purple-dark); font-weight: 600; }
+    .cal-day.today { background: var(--sky); color: #fff; font-weight: 600; }
+    .cal-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--purple); margin: 1px auto 0; }
+
+    /* 차트 */
+    .chart-wrap { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; }
+    .chart-title { font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 12px; }
+    .chart-bar-wrap { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-bottom: 4px; }
+    .chart-bar { flex: 1; border-radius: 4px 4px 0 0; background: #C7D7F8; min-height: 4px; transition: background 0.2s; }
+    .chart-bar.active { background: var(--sky); }
+    .chart-labels { display: flex; gap: 6px; }
+    .chart-label { flex: 1; font-size: 10px; color: var(--text-muted); text-align: center; }
+
+    /* 포인트 탭 */
+    .point-header {
+      background: linear-gradient(135deg, var(--sky), var(--purple));
+      border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+    }
+    .point-header-label { font-size: 12px; color: rgba(255,255,255,0.8); margin-bottom: 4px; }
+    .point-header-value { font-size: 30px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .point-header-sub { font-size: 12px; color: rgba(255,255,255,0.8); margin-bottom: 10px; }
+    .progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.3); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #fff; border-radius: 4px; transition: width 0.6s ease; }
+
+    .streak-banner {
+      background: var(--surface); border-radius: var(--radius);
+      border: 1px solid var(--border); padding: 14px;
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
+    }
+    .streak-label { font-size: 13px; color: var(--text-sub); }
+    .streak-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .streak-value { font-size: 18px; font-weight: 700; color: var(--purple); }
+
+    .rule-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; margin-bottom: 4px; }
+    .rule-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .rule-row:last-child { border-bottom: none; }
+    .rule-name { font-size: 13px; color: var(--text); font-weight: 500; }
+    .rule-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .rule-point { font-size: 14px; font-weight: 700; color: var(--sky); }
+
+    .bonus-card {
+      background: var(--purple-light); border-radius: var(--radius);
+      border: 1px solid #C4B5FD; overflow: hidden; margin-bottom: 4px;
+    }
+    .bonus-header { padding: 12px 14px 8px; font-size: 13px; font-weight: 600; color: var(--purple-dark); display: flex; align-items: center; gap: 6px; }
+    .bonus-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid #C4B5FD44; }
+    .bonus-day { font-size: 13px; font-weight: 600; color: #5B21B6; }
+    .bonus-status { font-size: 11px; color: #7C3AED; margin-top: 2px; }
+    .bonus-badge {
+      font-size: 10px; padding: 2px 7px; border-radius: 10px;
+      background: var(--purple); color: #fff; margin-left: 6px; vertical-align: middle;
+    }
+    .bonus-badge.done { background: var(--sky); }
+    .bonus-point { font-size: 14px; font-weight: 700; color: var(--purple); }
+
+    .reward-card {
+      background: var(--surface); border-radius: var(--radius);
+      border: 1px solid var(--border); padding: 14px; margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .reward-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .reward-cond { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+    .reward-badge-pill {
+      font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+      background: var(--sky-light); color: var(--sky-dark); white-space: nowrap;
+    }
+    .reward-badge-pill.done { background: var(--purple-light); color: var(--purple-dark); }
+
+    /* 하단 네비게이션 */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 430px;
+      display: flex; background: var(--surface);
+      border-top: 1px solid var(--border); padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 3px; cursor: pointer; padding: 4px 0;
+    }
+    .nav-icon { font-size: 22px; }
+    .nav-label { font-size: 10px; color: var(--text-muted); }
+    .nav-item.active .nav-label { color: var(--sky); font-weight: 600; }
+
+    /* 모달 */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 430px; background: var(--surface);
+      border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+    }
+    .modal-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+    .modal-input {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid var(--border); font-size: 14px; color: var(--text);
+      background: var(--bg); margin-bottom: 10px; outline: none;
+    }
+    .modal-input:focus { border-color: var(--sky); }
+    .modal-btn {
+      width: 100%; padding: 14px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--sky), var(--purple));
+      color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 8px;
+    }
+    .modal-cancel {
+      width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-sub); font-size: 14px; cursor: pointer;
+    }
+    .book-result {
+      background: var(--sky-light); border-radius: 10px; padding: 14px;
+      margin-bottom: 12px; display: none;
+    }
+    .book-result.show { display: block; }
+    .book-result-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .book-result-row { font-size: 12px; color: var(--text-sub); margin-bottom: 3px; }
+
+    /* 로그인 화면 */
+    .login-screen {
+      width: 100%; max-width: 430px; min-height: 100vh;
+      background: linear-gradient(135deg, var(--sky) 0%, var(--purple) 100%);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 32px 24px; margin: 0 auto;
+    }
+    .login-logo { font-size: 48px; margin-bottom: 8px; }
+    .login-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; text-align: center; }
+    .login-sub { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 32px; text-align: center; }
+    .profile-grid { width: 100%; display: grid; gap: 12px; margin-bottom: 16px; }
+    .profile-card {
+      background: rgba(255,255,255,0.95); border-radius: 14px;
+      padding: 16px; display: flex; align-items: center; gap: 14px;
+      cursor: pointer; transition: transform 0.15s; border: none;
+    }
+    .profile-card:active { transform: scale(0.97); }
+    .profile-avatar {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: var(--purple-light); display: flex; align-items: center;
+      justify-content: center; font-size: 24px; flex-shrink: 0;
+    }
+    .profile-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .profile-meta { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+    .add-profile-btn {
+      width: 100%; padding: 14px; border-radius: 14px;
+      border: 2px dashed rgba(255,255,255,0.6); background: transparent;
+      color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .pin-dots { display: flex; gap: 12px; justify-content: center; margin: 20px 0; }
+    .pin-dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.6); background: transparent;
+    }
+    .pin-dot.filled { background: #fff; border-color: #fff; }
+    .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 280px; }
+    .pin-key {
+      aspect-ratio: 1; border-radius: 50%; border: none;
+      background: rgba(255,255,255,0.15); color: #fff;
+      font-size: 22px; font-weight: 600; cursor: pointer;
+    }
+    .pin-key:active { background: rgba(255,255,255,0.3); }
+    .pin-key.empty { background: transparent; cursor: default; }
+    .login-back { color: rgba(255,255,255,0.85); font-size: 13px; margin-top: 20px; cursor: pointer; text-decoration: underline; }
+    .top-profile-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 12px; }
+    .top-profile-info { display: flex; align-items: center; gap: 8px; }
+    .top-profile-avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--purple-light);
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .top-profile-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .switch-profile-btn { font-size: 12px; color: var(--sky-dark); cursor: pointer; padding: 4px 0; }
+  </style>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+<!-- 로그인: 프로필 선택 화면 -->
+<div class="login-screen" id="profileScreen">
+  <div class="login-logo">📚</div>
+  <div class="login-title">독서통장</div>
+  <div class="login-sub">누구인지 선택해주세요</div>
+  <div class="profile-grid" id="profileGrid"></div>
+  <button class="add-profile-btn" onclick="openAddProfile()">+ 아이 추가하기</button>
+</div>
+
+<!-- 로그인: PIN 입력 화면 -->
+<div class="login-screen" id="pinScreen" style="display:none;">
+  <div class="profile-avatar" id="pinAvatar" style="width:64px;height:64px;font-size:32px;margin-bottom:12px;"></div>
+  <div class="login-title" id="pinName"></div>
+  <div class="login-sub">PIN 4자리를 입력해주세요</div>
+  <div class="pin-dots" id="pinDots">
+    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+  </div>
+  <div class="pin-pad" id="pinPad"></div>
+  <div class="login-back" onclick="backToProfiles()">다른 프로필 선택</div>
+</div>
+
+<!-- 로그인: 프로필 추가 화면 -->
+<div class="login-screen" id="addProfileScreen" style="display:none;">
+  <div class="login-logo">📚</div>
+  <div class="login-title">아이 추가하기</div>
+  <div class="login-sub">이름과 PIN 4자리를 설정해주세요</div>
+  <input class="modal-input" id="newProfileName" placeholder="아이 이름" style="background:#fff; margin-bottom:10px;" />
+  <input class="modal-input" id="newProfilePin" type="password" placeholder="PIN 4자리 숫자" maxlength="4" inputmode="numeric" pattern="[0-9]*" style="background:#fff; margin-bottom:16px;" />
+  <div id="addProfileError" style="color:#ef4444; font-size:13px; margin-bottom:10px; display:none;"></div>
+  <button class="modal-btn" id="addProfileBtn" onclick="createProfile()" style="margin-bottom:8px;">추가하기</button>
+  <div class="login-back" onclick="backToProfiles()">취소</div>
+</div>
+
+<div class="app" id="mainApp" style="display:none;">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <h1>📚 독서통장</h1>
+    <p>오늘도 책 한 권 어때요?</p>
+  </div>
+
+  <div class="content">
+    <div class="top-profile-bar">
+      <div class="top-profile-info">
+        <div class="top-profile-avatar" id="topAvatar">🧒</div>
+        <div class="top-profile-name" id="topName"></div>
+      </div>
+      <div class="switch-profile-btn" onclick="logout()">프로필 전환</div>
+    </div>
+
+    <!-- 안내 탭 -->
+    <div class="tab-content active" id="tab-home">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">올해 읽은 책</div>
+          <div class="stat-value" id="stat-total">0<span class="stat-unit">권</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">이번 달</div>
+          <div class="stat-value" id="stat-month">0<span class="stat-unit">권</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">누적 포인트</div>
+          <div class="stat-value" id="stat-point">0<span class="stat-unit">P</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">연속 기록</div>
+          <div class="stat-value" id="stat-streak">0<span class="stat-unit">일</span></div>
+        </div>
+      </div>
+
+      <div class="section-title">사용 방법</div>
+      <div class="guide-card">
+        <div class="guide-num">1</div>
+        <div class="guide-text">
+          <strong>책 바코드 스캔</strong>
+          <span>독서목록 탭에서 카메라로 책 뒷면 바코드를 찍어요</span>
+        </div>
+      </div>
+      <div class="guide-card">
+        <div class="guide-num">2</div>
+        <div class="guide-text">
+          <strong>독서 기록 저장</strong>
+          <span>제목/저자/출판사가 자동 입력되고 날짜와 함께 저장돼요</span>
+        </div>
+      </div>
+      <div class="guide-card">
+        <div class="guide-num">3</div>
+        <div class="guide-text">
+          <strong>포인트 적립 & 선물 교환</strong>
+          <span>책 읽을 때마다 포인트가 쌓이고 연속 독서 보너스도 받아요</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 독서목록 탭 -->
+    <div class="tab-content" id="tab-scan">
+      <div class="scan-area" id="scanBtn">
+        <div class="scan-icon">📷</div>
+        <div class="scan-label">책 바코드 스캔</div>
+        <div class="scan-sub">책 뒷면 바코드에 카메라를 갖다 대세요</div>
+      </div>
+      <button class="modal-btn" style="margin-bottom:12px;" onclick="openManualInput()">✏️ 직접 입력하기</button>
+
+      <div class="section-title">독서 목록</div>
+      <div id="bookList">
+        <div style="text-align:center; padding:32px 0; color:var(--text-muted); font-size:14px;">
+          아직 기록된 책이 없어요<br>
+          <span style="font-size:12px;">바코드를 스캔해서 첫 책을 추가해보세요 📖</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 캘린더 탭 -->
+    <div class="tab-content" id="tab-cal">
+      <div class="cal-nav-row">
+        <button class="cal-btn" id="calPrev">‹</button>
+        <div class="cal-title-text" id="calTitle"></div>
+        <button class="cal-btn" id="calNext">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+
+      <div class="chart-wrap">
+        <div class="chart-title">월별 독서 현황 (최근 6개월)</div>
+        <div class="chart-bar-wrap" id="chartBars"></div>
+        <div class="chart-labels" id="chartLabels"></div>
+      </div>
+    </div>
+
+    <!-- 포인트 탭 -->
+    <div class="tab-content" id="tab-point">
+      <div class="point-header">
+        <div class="point-header-label">현재 포인트</div>
+        <div class="point-header-value" id="pointValue">0 P</div>
+        <div class="point-header-sub" id="pointGoalText">포인트 탭에서 선물 목표를 설정해보세요</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+
+      <div class="streak-banner">
+        <div>
+          <div class="streak-label">현재 연속 독서</div>
+          <div class="streak-hint" id="streakHint">책을 읽고 기록을 시작해보세요</div>
+        </div>
+        <div class="streak-value" id="streakValue">🔥 0일</div>
+      </div>
+
+      <div class="section-title">기본 적립 규칙</div>
+      <div class="rule-card" id="ruleList"></div>
+      <button class="modal-btn" style="margin-top:8px;margin-bottom:4px;" onclick="openRuleModal()">+ 규칙 추가</button>
+
+      <div class="section-title">연속 독서 보너스</div>
+      <div class="bonus-card">
+        <div class="bonus-header">🔥 며칠 연속으로 읽으면 보너스 적립!</div>
+        <div id="bonusRuleList"></div>
+      </div>
+      <button class="modal-btn" style="margin-top:8px;margin-bottom:4px;" onclick="openBonusRuleModal()">+ 연속 보너스 추가</button>
+
+      <div class="section-title">선물 목록</div>
+      <div id="rewardList">
+        <div style="text-align:center; padding:24px 0; color:var(--text-muted); font-size:14px;">
+          아직 등록된 선물이 없어요<br>
+          <span style="font-size:12px;">아래 버튼으로 선물 목표를 추가해보세요 🎁</span>
+        </div>
+      </div>
+      <button class="modal-btn" style="margin-top:4px;" onclick="openRewardModal()">+ 선물 목표 추가</button>
+    </div>
+  </div>
+
+  <!-- 하단 네비게이션 -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" data-tab="home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">내 통장</span>
+    </div>
+    <div class="nav-item" data-tab="scan">
+      <span class="nav-icon">📷</span>
+      <span class="nav-label">독서목록</span>
+    </div>
+    <div class="nav-item" data-tab="cal">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">캘린더</span>
+    </div>
+    <div class="nav-item" data-tab="point">
+      <span class="nav-icon">⭐</span>
+      <span class="nav-label">포인트</span>
+    </div>
+  </nav>
+</div>
+
+<!-- 카메라 스캔 모달 -->
+<div class="modal-overlay" id="cameraModal">
+  <div class="modal" style="padding:16px;">
+    <div class="modal-title">📷 바코드 스캔</div>
+    <div id="qr-reader" style="width:100%; border-radius:10px; overflow:hidden; margin-bottom:12px;"></div>
+    <div id="scanStatus" style="text-align:center; font-size:13px; color:var(--text-sub); margin-bottom:12px;">카메라를 책 뒷면 바코드에 갖다 대세요</div>
+    <button class="modal-cancel" onclick="stopCamera()">닫기</button>
+  </div>
+</div>
+
+<!-- 수동 입력 / 책 정보 모달 -->
+<div class="modal-overlay" id="scanModal">
+  <div class="modal">
+    <div class="modal-title">📚 책 추가하기</div>
+
+    <!-- 제목 검색 -->
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <input class="modal-input" id="titleSearchInput" placeholder="책 제목으로 검색" style="margin-bottom:0; flex:1;" oninput="onTitleInput()" />
+      <button onclick="searchByTitle()" style="padding:0 14px; border-radius:10px; border:1px solid var(--border); background:linear-gradient(135deg,var(--sky),var(--purple)); color:#fff; font-size:14px; cursor:pointer; white-space:nowrap;">🔍</button>
+    </div>
+
+    <!-- 검색 결과 드롭다운 -->
+    <div id="searchResults" style="display:none; background:var(--surface); border:0.5px solid var(--border); border-radius:10px; margin-bottom:10px; overflow:hidden; max-height:200px; overflow-y:auto;"></div>
+
+    <!-- 선택된 책 정보 -->
+    <div class="book-result" id="bookResult">
+      <div class="book-result-title" id="resultTitle"></div>
+      <div class="book-result-row" id="resultAuthor"></div>
+      <div class="book-result-row" id="resultPublisher"></div>
+    </div>
+
+    <input class="modal-input" id="isbnInput" placeholder="ISBN (선택사항)" maxlength="13" inputmode="numeric" />
+    <input class="modal-input" id="titleInput" placeholder="책 제목" />
+    <input class="modal-input" id="authorInput" placeholder="지은이" />
+    <input class="modal-input" id="publisherInput" placeholder="출판사" />
+    <button class="modal-btn" onclick="saveBook()" style="background:linear-gradient(135deg,#A78BFA,#7B9FE8)">✅ 독서 기록 저장</button>
+    <button class="modal-cancel" onclick="closeModal('scanModal')">취소</button>
+  </div>
+</div>
+
+<!-- 선물 모달 -->
+<div class="modal-overlay" id="rewardModal">
+  <div class="modal">
+    <div class="modal-title">🎁 선물 목표 추가</div>
+    <input class="modal-input" id="rewardName" placeholder="선물 이름 (예: 레고 닌자고)" />
+    <input class="modal-input" id="rewardPoint" placeholder="필요 포인트 (예: 3000)" inputmode="numeric" />
+    <button class="modal-btn" onclick="saveReward()">저장하기</button>
+    <button class="modal-cancel" onclick="closeModal('rewardModal')">취소</button>
+  </div>
+</div>
+
+<!-- 규칙 추가/수정 모달 -->
+<div class="modal-overlay" id="ruleModal">
+  <div class="modal">
+    <div class="modal-title" id="ruleModalTitle">📋 규칙 추가</div>
+    <input class="modal-input" id="ruleNameInput" placeholder="규칙 이름 (예: 주간 목표 달성)" />
+    <input class="modal-input" id="ruleDescInput" placeholder="설명 (예: 주 3권 이상 읽기)" />
+    <input class="modal-input" id="rulePointInput" placeholder="포인트 (예: 200)" inputmode="numeric" />
+    <input type="hidden" id="ruleEditId" />
+    <button class="modal-btn" onclick="saveRule()">저장하기</button>
+    <button class="modal-cancel" onclick="closeModal('ruleModal')">취소</button>
+  </div>
+</div>
+
+<!-- 연속 보너스 추가/수정 모달 -->
+<div class="modal-overlay" id="bonusRuleModal">
+  <div class="modal">
+    <div class="modal-title" id="bonusRuleModalTitle">🔥 연속 보너스 추가</div>
+    <input class="modal-input" id="bonusDaysInput" placeholder="연속 일수 (예: 7)" inputmode="numeric" />
+    <input class="modal-input" id="bonusPointInput" placeholder="보너스 포인트 (예: 200)" inputmode="numeric" />
+    <input type="hidden" id="bonusRuleEditId" />
+    <button class="modal-btn" onclick="saveBonusRule()">저장하기</button>
+    <button class="modal-cancel" onclick="closeModal('bonusRuleModal')">취소</button>
+  </div>
+</div>
+
+<!-- 날짜별 독서 목록 모달 -->
+<div class="modal-overlay" id="dayBooksModal">
+  <div class="modal">
+    <div class="modal-title" id="dayBooksDate"></div>
+    <div id="dayBooksList"></div>
+    <button class="modal-cancel" style="margin-top:12px;" onclick="closeModal('dayBooksModal')">닫기</button>
+  </div>
+</div>
+
+<!-- 책 수정 모달 -->
+<div class="modal-overlay" id="editBookModal">
+  <div class="modal">
+    <div class="modal-title">✏️ 독서 기록 수정</div>
+    <input class="modal-input" id="editTitle" placeholder="책 제목" />
+    <input class="modal-input" id="editAuthor" placeholder="지은이" />
+    <input class="modal-input" id="editPublisher" placeholder="출판사" />
+    <input class="modal-input" id="editDate" type="date" />
+    <input type="hidden" id="editBookId" />
+    <button class="modal-btn" onclick="updateBook()">수정 완료</button>
+    <button class="modal-cancel" onclick="closeModal('editBookModal')">취소</button>
+  </div>
+</div>
+
+<script>
+  // ══════════════ Supabase 초기화 ══════════════
+  const SUPABASE_URL = 'https://xzyvaehcwzdtzhxfrwus.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6eXZhZWhjd3pkdHpoeGZyd3VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTE5NzUsImV4cCI6MjA5ODQ4Nzk3NX0.gkr67Z2bvZs8OfiN8p87YGoN9hM_tn7cFLA2Bcd51msANON_KEY_입력';
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ══════════════ 프로필(로그인) 시스템 ══════════════
+  const AVATARS = ['🦁','🐰','🐻','🐼','🦊','🐯','🐸','🐶'];
+  let profiles = [];
+  let currentProfileId = null;
+  let pinBuffer = '';
+  let pendingProfileId = null;
+
+  async function loadProfiles() {
+    const { data } = await sb.from('profiles').select('*');
+    profiles = data || [];
+    renderProfileGrid();
+    if (!profiles.length) {
+      document.getElementById('profileScreen').style.display = 'none';
+      document.getElementById('addProfileScreen').style.display = 'flex';
+    }
+  }
+
+  async function saveProfiles() {
+    // Supabase에서는 개별 저장으로 처리
+  }
+
+  function renderProfileGrid() {
+    const grid = document.getElementById('profileGrid');
+    if (!profiles.length) {
+      grid.innerHTML = '';
+      return;
+    }
+    grid.innerHTML = profiles.map(p => `
+      <button class="profile-card" onclick="selectProfile(${p.id})">
+        <div class="profile-avatar">${p.avatar}</div>
+        <div>
+          <div class="profile-name">${p.name}</div>
+          <div class="profile-meta">탭하여 입장</div>
+        </div>
+      </button>
+    `).join('');
+  }
+
+  function selectProfile(id) {
+    pendingProfileId = id;
+    const p = profiles.find(x => x.id === id);
+    pinBuffer = '';
+    document.getElementById('pinAvatar').textContent = p.avatar;
+    document.getElementById('pinName').textContent = p.name;
+    updatePinDots();
+    renderPinPad();
+    document.getElementById('profileScreen').style.display = 'none';
+    document.getElementById('pinScreen').style.display = 'flex';
+  }
+
+  function renderPinPad() {
+    const keys = [1,2,3,4,5,6,7,8,9,'',0,'del'];
+    document.getElementById('pinPad').innerHTML = keys.map(k => {
+      if (k === '') return '<div class="pin-key empty"></div>';
+      if (k === 'del') return `<button class="pin-key" onclick="pinDelete()">⌫</button>`;
+      return `<button class="pin-key" onclick="pinPress(${k})">${k}</button>`;
+    }).join('');
+  }
+
+  function updatePinDots() {
+    document.querySelectorAll('#pinDots .pin-dot').forEach((dot, i) => {
+      dot.classList.toggle('filled', i < pinBuffer.length);
+    });
+  }
+
+  function pinPress(n) {
+    if (pinBuffer.length >= 4) return;
+    pinBuffer += n;
+    updatePinDots();
+    if (pinBuffer.length === 4) {
+      const p = profiles.find(x => x.id === pendingProfileId);
+      setTimeout(() => {
+        if (p.pin === pinBuffer) {
+          loginAs(p.id);
+        } else {
+          alert('PIN이 일치하지 않아요. 다시 입력해주세요.');
+          pinBuffer = '';
+          updatePinDots();
+        }
+      }, 150);
+    }
+  }
+  function pinDelete() {
+    pinBuffer = pinBuffer.slice(0, -1);
+    updatePinDots();
+  }
+
+  function backToProfiles() {
+    document.getElementById('pinScreen').style.display = 'none';
+    document.getElementById('addProfileScreen').style.display = 'none';
+    document.getElementById('profileScreen').style.display = 'flex';
+  }
+
+  function openAddProfile() {
+    document.getElementById('profileScreen').style.display = 'none';
+    document.getElementById('addProfileScreen').style.display = 'flex';
+  }
+
+  async function createProfile() {
+    const name = document.getElementById('newProfileName').value.trim();
+    const pin = document.getElementById('newProfilePin').value.trim();
+    const errorEl = document.getElementById('addProfileError');
+    const btn = document.getElementById('addProfileBtn');
+
+    errorEl.style.display = 'none';
+
+    if (!name) { errorEl.textContent = '이름을 입력해주세요'; errorEl.style.display = 'block'; return; }
+    if (!/^\d{4}$/.test(pin)) { errorEl.textContent = 'PIN은 숫자 4자리로 입력해주세요'; errorEl.style.display = 'block'; return; }
+
+    btn.textContent = '추가 중...';
+    btn.disabled = true;
+
+    const id = Date.now();
+    const avatar = AVATARS[profiles.length % AVATARS.length];
+
+    const { error } = await sb.from('profiles').insert({ id, name, pin, avatar });
+    if (error) {
+      errorEl.textContent = '추가 실패: ' + error.message;
+      errorEl.style.display = 'block';
+      btn.textContent = '추가하기';
+      btn.disabled = false;
+      return;
+    }
+
+    await sb.from('points').insert({ profile_id: id, total: 0 });
+    await sb.from('rules').insert([
+      { id: id * 10 + 1, profile_id: id, name: '책 1권 완독', description: '날짜 기록 시 적립', point: 100, fixed: true },
+      { id: id * 10 + 2, profile_id: id, name: '주간 목표 달성', description: '주 3권 이상 읽기', point: 200, fixed: false },
+      { id: id * 10 + 3, profile_id: id, name: '월간 목표 달성', description: '부모님과 협의한 목표 권수', point: 500, fixed: false },
+    ]);
+    await sb.from('bonus_rules').insert([
+      { id: id * 10 + 1, profile_id: id, days: 5, point: 100 },
+      { id: id * 10 + 2, profile_id: id, days: 10, point: 300 },
+      { id: id * 10 + 3, profile_id: id, days: 20, point: 700 },
+      { id: id * 10 + 4, profile_id: id, days: 30, point: 1500 },
+    ]);
+
+    profiles.push({ id, name, pin, avatar });
+    document.getElementById('newProfileName').value = '';
+    document.getElementById('newProfilePin').value = '';
+    btn.textContent = '추가하기';
+    btn.disabled = false;
+    renderProfileGrid();
+    backToProfiles();
+    await loginAs(id);
+  }
+
+  async function loginAs(id) {
+    currentProfileId = id;
+    const p = profiles.find(x => x.id === id);
+    document.getElementById('profileScreen').style.display = 'none';
+    document.getElementById('pinScreen').style.display = 'none';
+    document.getElementById('addProfileScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    document.getElementById('topAvatar').textContent = p.avatar;
+    document.getElementById('topName').textContent = p.name + '님';
+    await loadState();
+    renderHome();
+    renderBookList();
+  }
+
+  function logout() {
+    currentProfileId = null;
+    document.getElementById('mainApp').style.display = 'none';
+    pinBuffer = '';
+    backToProfiles();
+  }
+
+  // 초기 화면 분기
+  renderProfileGrid();
+  if (!profiles.length) {
+    document.getElementById('profileScreen').style.display = 'none';
+    document.getElementById('addProfileScreen').style.display = 'flex';
+  }
+
+  // ══════════════ 프로필별 데이터 상태 ══════════════
+  let state = { books: [], rewards: [], points: 0, rules: [], bonusRules: [] };
+
+  async function loadState() {
+    const [books, rewards, pointsRow, rules, bonusRules] = await Promise.all([
+      sb.from('books').select('*').eq('profile_id', currentProfileId).order('date', { ascending: false }),
+      sb.from('rewards').select('*').eq('profile_id', currentProfileId),
+      sb.from('points').select('*').eq('profile_id', currentProfileId).single(),
+      sb.from('rules').select('*').eq('profile_id', currentProfileId),
+      sb.from('bonus_rules').select('*').eq('profile_id', currentProfileId),
+    ]);
+    state.books = books.data || [];
+    state.rewards = rewards.data || [];
+    state.points = pointsRow.data?.total || 0;
+    state.rules = rules.data || [];
+    state.bonusRules = bonusRules.data || [];
+  }
+
+  async function save() {
+    await sb.from('points').upsert({ profile_id: currentProfileId, total: state.points });
+  }
+
+  async function saveBooks() {
+    // 책은 개별 추가/삭제로 처리
+  }
+
+  // ── 탭 전환 ──
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const tab = item.dataset.tab;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+      if (tab === 'cal') renderCalendar();
+      if (tab === 'point') renderPoints();
+      if (tab === 'home') renderHome();
+    });
+  });
+
+  // ── 홈 렌더링 ──
+  function renderHome() {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const thisMonth = now.getMonth();
+    const yearBooks = state.books.filter(b => new Date(b.date).getFullYear() === thisYear);
+    const monthBooks = state.books.filter(b => {
+      const d = new Date(b.date);
+      return d.getFullYear() === thisYear && d.getMonth() === thisMonth;
+    });
+    document.getElementById('stat-total').innerHTML = yearBooks.length + '<span class="stat-unit">권</span>';
+    document.getElementById('stat-month').innerHTML = monthBooks.length + '<span class="stat-unit">권</span>';
+    document.getElementById('stat-point').innerHTML = state.points.toLocaleString() + '<span class="stat-unit">P</span>';
+    document.getElementById('stat-streak').innerHTML = calcStreak() + '<span class="stat-unit">일</span>';
+  }
+
+  // ── 연속 독서 계산 ──
+  function calcStreak() {
+    if (!state.books.length) return 0;
+    const dates = [...new Set(state.books.map(b => b.date))].sort().reverse();
+    const today = new Date().toISOString().slice(0, 10);
+    let streak = 0;
+    let check = today;
+    for (const d of dates) {
+      if (d === check) {
+        streak++;
+        const prev = new Date(check);
+        prev.setDate(prev.getDate() - 1);
+        check = prev.toISOString().slice(0, 10);
+      } else if (d < check) break;
+    }
+    return streak;
+  }
+
+  // ── 카메라 스캔 ──
+  let html5QrCode = null;
+  let isScanning = false;
+  let apiCache = {};
+
+  document.getElementById('scanBtn').onclick = () => startCamera();
+
+  function startCamera() {
+    isScanning = false;
+    openModal('cameraModal');
+    document.getElementById('scanStatus').textContent = '카메라를 책 뒷면 바코드에 갖다 대세요';
+    html5QrCode = new Html5Qrcode('qr-reader');
+
+    html5QrCode.start(
+      { facingMode: 'environment' },
+      { fps: 25, qrbox: { width: 300, height: 100 }, aspectRatio: 1.5 },
+      async (decodedText) => {
+        if (isScanning) return;
+        isScanning = true;
+        const isbn = decodedText.replace(/[^0-9X]/gi, '');
+        if (isbn.length !== 13 && isbn.length !== 10) {
+          setTimeout(() => { isScanning = false; }, 800);
+          return;
+        }
+        document.getElementById('scanStatus').textContent = '📖 인식 완료! 책 정보 불러오는 중...';
+        // 캐시된 결과 있으면 즉시 사용
+        if (apiCache[isbn]) {
+          await stopCamera();
+          fillBookForm(apiCache[isbn]);
+          openModal('scanModal');
+          return;
+        }
+        // API 호출
+        try {
+          const res = await fetch(`/api/book?isbn=${isbn}`);
+          const data = await res.json();
+          if (data.documents && data.documents.length > 0) {
+            apiCache[isbn] = data.documents[0];
+            await stopCamera();
+            fillBookForm(data.documents[0]);
+            openModal('scanModal');
+          } else {
+            await stopCamera();
+            document.getElementById('isbnInput').value = isbn;
+            openModal('scanModal');
+          }
+        } catch (e) {
+          await stopCamera();
+          document.getElementById('isbnInput').value = isbn;
+          openModal('scanModal');
+        }
+      },
+      () => {}
+    ).then(() => {
+      const video = document.querySelector('#qr-reader video');
+      if (video && video.srcObject) {
+        const track = video.srcObject.getVideoTracks()[0];
+        if (track && track.applyConstraints) {
+          track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+        }
+      }
+      // API 워밍업 (첫 호출 지연 방지)
+      fetch('/api/book?isbn=warmup').catch(() => {});
+    }).catch(() => {
+      document.getElementById('scanStatus').textContent = '카메라 접근 실패. 직접 입력해주세요.';
+    });
+  }
+
+  function fillBookForm(book) {
+    document.getElementById('isbnInput').value = '';
+    document.getElementById('titleInput').value = book.title || '';
+    document.getElementById('authorInput').value = book.authors ? book.authors.join(', ') : '';
+    document.getElementById('publisherInput').value = book.publisher || '';
+    document.getElementById('resultTitle').textContent = book.title || '';
+    document.getElementById('resultAuthor').textContent = '지은이: ' + (book.authors ? book.authors.join(', ') : '정보 없음');
+    document.getElementById('resultPublisher').textContent = '출판사: ' + (book.publisher || '정보 없음');
+    document.getElementById('bookResult').classList.add('show');
+  }
+
+  function stopCamera() {
+    return new Promise(resolve => {
+      if (html5QrCode) {
+        html5QrCode.stop().catch(() => {}).finally(() => {
+          html5QrCode = null;
+          document.getElementById('qr-reader').innerHTML = '';
+          closeModal('cameraModal');
+          resolve();
+        });
+      } else {
+        closeModal('cameraModal');
+        resolve();
+      }
+    });
+  }
+
+  function openManualInput() {
+    ['isbnInput','titleInput','authorInput','publisherInput'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('titleSearchInput').value = '';
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('bookResult').classList.remove('show');
+    openModal('scanModal');
+  }
+
+  let titleSearchTimer = null;
+  function onTitleInput() {
+    clearTimeout(titleSearchTimer);
+    const val = document.getElementById('titleSearchInput').value.trim();
+    if (!val) { document.getElementById('searchResults').style.display = 'none'; return; }
+    titleSearchTimer = setTimeout(() => searchByTitle(), 600);
+  }
+
+  async function searchByTitle() {
+    const title = document.getElementById('titleSearchInput').value.trim();
+    if (!title) return;
+    const resultsEl = document.getElementById('searchResults');
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = '<div style="padding:12px;text-align:center;font-size:13px;color:var(--text-muted);">검색 중...</div>';
+    try {
+      const res = await fetch(`/api/book?title=${encodeURIComponent(title)}`);
+      const data = await res.json();
+      if (data.documents && data.documents.length > 0) {
+        resultsEl.innerHTML = data.documents.map((b, i) => `
+          <div onclick="selectBook(${i})" data-idx="${i}"
+            style="padding:10px 14px; border-bottom:0.5px solid var(--border); cursor:pointer; display:flex; gap:10px; align-items:center;"
+            onmouseover="this.style.background='var(--surface-1)'" onmouseout="this.style.background=''">
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:13px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${b.title}</div>
+              <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">${b.authors ? b.authors.join(', ') : ''} · ${b.publisher || ''}</div>
+            </div>
+          </div>
+        `).join('');
+        // 검색 결과를 전역에 임시 저장
+        window._searchResults = data.documents;
+      } else {
+        resultsEl.innerHTML = '<div style="padding:12px;text-align:center;font-size:13px;color:var(--text-muted);">검색 결과가 없어요. 직접 입력해주세요.</div>';
+      }
+    } catch (e) {
+      resultsEl.innerHTML = '<div style="padding:12px;text-align:center;font-size:13px;color:#ef4444;">오류가 발생했어요. 직접 입력해주세요.</div>';
+    }
+  }
+
+  function selectBook(idx) {
+    const book = window._searchResults[idx];
+    if (!book) return;
+    fillBookForm(book);
+    document.getElementById('titleInput').value = book.title || '';
+    document.getElementById('authorInput').value = book.authors ? book.authors.join(', ') : '';
+    document.getElementById('publisherInput').value = book.publisher || '';
+    document.getElementById('isbnInput').value = book.isbn ? book.isbn.split(' ')[0] : '';
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('titleSearchInput').value = book.title || '';
+  }
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+    if (id === 'cameraModal') { stopCamera(); return; }
+    if (id === 'scanModal') {
+      ['isbnInput','titleInput','authorInput','publisherInput'].forEach(i => document.getElementById(i).value = '');
+      document.getElementById('bookResult').classList.remove('show');
+    }
+  }
+
+  // ── 카카오 책 검색 API ──
+  const KAKAO_API_KEY = '여기에_REST_API_키_입력';
+
+  async function searchBook() {
+    const isbn = document.getElementById('isbnInput').value.trim();
+    if (!isbn) { alert('ISBN 번호를 입력해주세요'); return; }
+
+    document.getElementById('scanStatus') && (document.getElementById('scanStatus').textContent = '책 정보 조회 중...');
+
+    try {
+      const res = await fetch(`/api/book?isbn=${isbn}`);
+      if (!res.ok) {
+        alert(`API 오류 (${res.status}): 잠시 후 다시 시도해주세요.`);
+        return;
+      }
+      const data = await res.json();
+
+      if (data.documents && data.documents.length > 0) {
+        const book = data.documents[0];
+        const title = book.title || '';
+        const author = book.authors ? book.authors.join(', ') : '';
+        const publisher = book.publisher || '';
+
+        document.getElementById('titleInput').value = title;
+        document.getElementById('authorInput').value = author;
+        document.getElementById('publisherInput').value = publisher;
+        document.getElementById('resultTitle').textContent = title;
+        document.getElementById('resultAuthor').textContent = '지은이: ' + (author || '정보 없음');
+        document.getElementById('resultPublisher').textContent = '출판사: ' + (publisher || '정보 없음');
+        document.getElementById('bookResult').classList.add('show');
+      } else {
+        alert('책 정보를 찾지 못했어요. 직접 입력해주세요.');
+      }
+    } catch (e) {
+      alert('네트워크 오류: ' + e.message + '\n\nCORS 문제일 수 있습니다. 직접 입력해주세요.');
+    }
+  }
+
+  async function saveBook() {
+    const title = document.getElementById('titleInput').value.trim();
+    if (!title) { alert('책 제목을 입력해주세요'); return; }
+    const book = {
+      id: Date.now(),
+      profile_id: currentProfileId,
+      title,
+      author: document.getElementById('authorInput').value.trim() || '미상',
+      publisher: document.getElementById('publisherInput').value.trim() || '미상',
+      date: new Date().toISOString().slice(0, 10),
+    };
+    const { error } = await sb.from('books').insert(book);
+    if (error) { alert('저장 실패: ' + error.message); return; }
+
+    state.books.unshift(book);
+    state.points += 100;
+
+    const streak = calcStreak();
+    const bonusRule = state.bonusRules.find(r => r.days === streak);
+    if (bonusRule) state.points += bonusRule.point;
+
+    await save();
+    closeModal('scanModal');
+    renderBookList();
+    renderHome();
+    alert('📚 기록 완료! +100P 적립됐어요');
+  }
+
+  function renderBookList() {
+    const el = document.getElementById('bookList');
+    if (!state.books.length) {
+      el.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--text-muted);font-size:14px;">아직 기록된 책이 없어요<br><span style="font-size:12px;">바코드를 스캔해서 첫 책을 추가해보세요 📖</span></div>';
+      return;
+    }
+    el.innerHTML = state.books.map(b => `
+      <div class="book-card" style="position:relative;" id="bookcard-${b.id}">
+        <div class="book-cover">📖</div>
+        <div class="book-info" style="flex:1; min-width:0;">
+          <div class="book-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.title}</div>
+          <div class="book-meta">${b.author} · ${b.publisher}</div>
+          <div class="book-date">${b.date}</div>
+        </div>
+        <button onclick="toggleBookMenu(${b.id}, event)" aria-label="더보기"
+          style="background:none;border:none;cursor:pointer;padding:4px 6px;color:var(--text-muted);font-size:20px;line-height:1;flex-shrink:0;border-radius:6px;">⋮</button>
+        <div id="bookmenu-${b.id}"
+          style="display:none;position:absolute;right:12px;top:44px;background:var(--surface);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.10);z-index:10;min-width:120px;overflow:hidden;">
+          <button onclick="openEditBook(${b.id})"
+            style="width:100%;padding:11px 16px;background:none;border:none;border-bottom:0.5px solid var(--border);text-align:left;font-size:14px;color:var(--sky-dark);cursor:pointer;display:flex;align-items:center;gap:8px;">
+            ✏️ 수정
+          </button>
+          <button onclick="deleteBook(${b.id})"
+            style="width:100%;padding:11px 16px;background:none;border:none;text-align:left;font-size:14px;color:#ef4444;cursor:pointer;display:flex;align-items:center;gap:8px;">
+            🗑️ 삭제
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    document.addEventListener('click', closeAllBookMenus, { once: false });
+  }
+
+  function toggleBookMenu(id, e) {
+    e.stopPropagation();
+    const menu = document.getElementById('bookmenu-' + id);
+    const isOpen = menu.style.display === 'block';
+    closeAllBookMenus();
+    if (!isOpen) menu.style.display = 'block';
+  }
+
+  function closeAllBookMenus() {
+    document.querySelectorAll('[id^="bookmenu-"]').forEach(m => m.style.display = 'none');
+  }
+
+  function openEditBook(id) {
+    const b = state.books.find(x => x.id === id);
+    if (!b) return;
+    document.getElementById('editBookId').value = id;
+    document.getElementById('editTitle').value = b.title;
+    document.getElementById('editAuthor').value = b.author;
+    document.getElementById('editPublisher').value = b.publisher;
+    document.getElementById('editDate').value = b.date;
+    openModal('editBookModal');
+  }
+
+  async function updateBook() {
+    const id = parseInt(document.getElementById('editBookId').value);
+    const title = document.getElementById('editTitle').value.trim();
+    if (!title) { alert('책 제목을 입력해주세요'); return; }
+    const updates = {
+      title,
+      author: document.getElementById('editAuthor').value.trim() || '미상',
+      publisher: document.getElementById('editPublisher').value.trim() || '미상',
+      date: document.getElementById('editDate').value,
+    };
+    const { error } = await sb.from('books').update(updates).eq('id', id);
+    if (error) { alert('수정 실패: ' + error.message); return; }
+    const idx = state.books.findIndex(x => x.id === id);
+    if (idx !== -1) state.books[idx] = { ...state.books[idx], ...updates };
+    closeModal('editBookModal');
+    renderBookList();
+    renderHome();
+  }
+
+  async function deleteBook(id) {
+    if (!confirm('이 독서 기록을 삭제할까요?')) return;
+    const { error } = await sb.from('books').delete().eq('id', id);
+    if (error) { alert('삭제 실패: ' + error.message); return; }
+    state.books = state.books.filter(x => x.id !== id);
+    state.points = Math.max(0, state.points - 100);
+    await save();
+    renderBookList();
+    renderHome();
+  }
+
+  // ── 캘린더 ──
+  let calYear = new Date().getFullYear();
+  let calMonth = new Date().getMonth();
+
+  function renderCalendar() {
+    const today = new Date().toISOString().slice(0, 10);
+    const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    document.getElementById('calTitle').textContent = `${calYear}년 ${months[calMonth]}`;
+
+    // 날짜별 책 목록 맵
+    const booksByDate = {};
+    state.books.forEach(b => {
+      if (!booksByDate[b.date]) booksByDate[b.date] = [];
+      booksByDate[b.date].push(b);
+    });
+
+    const first = new Date(calYear, calMonth, 1).getDay();
+    const days = new Date(calYear, calMonth + 1, 0).getDate();
+    let html = ['일','월','화','수','목','금','토'].map(d => `<div class="cal-day-name">${d}</div>`).join('');
+    for (let i = 0; i < first; i++) html += '<div class="cal-day"></div>';
+    for (let d = 1; d <= days; d++) {
+      const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday = dateStr === today;
+      const books = booksByDate[dateStr] || [];
+      const count = books.length;
+      let cls = 'cal-day';
+      if (isToday) cls += ' today';
+      else if (count > 0) cls += ' has-book';
+      const countBadge = count > 0
+        ? `<div class="cal-count" onclick="showDayBooks('${dateStr}', event)" style="font-size:10px;font-weight:700;color:${isToday ? '#fff' : 'var(--purple-dark)'};line-height:1;">${count}권</div>`
+        : '';
+      html += `<div class="${cls}" style="padding:4px 2px;">${d}${countBadge}</div>`;
+    }
+    document.getElementById('calGrid').innerHTML = html;
+    renderChart();
+  }
+
+  function showDayBooks(dateStr, e) {
+    e.stopPropagation();
+    const books = state.books.filter(b => b.date === dateStr);
+    if (!books.length) return;
+    document.getElementById('dayBooksDate').textContent = dateStr + ' 독서 목록';
+    document.getElementById('dayBooksList').innerHTML = books.map(b => `
+      <div style="padding:10px 0; border-bottom:0.5px solid var(--border);">
+        <div style="font-size:14px; font-weight:500; color:var(--text);">📖 ${b.title}</div>
+        <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">${b.author} · ${b.publisher}</div>
+      </div>
+    `).join('');
+    openModal('dayBooksModal');
+  }
+
+  document.getElementById('calPrev').onclick = () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); };
+  document.getElementById('calNext').onclick = () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); };
+
+  function renderChart() {
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ y: d.getFullYear(), m: d.getMonth() });
+    }
+    const counts = months.map(({ y, m }) =>
+      state.books.filter(b => { const d = new Date(b.date); return d.getFullYear() === y && d.getMonth() === m; }).length
+    );
+    const max = Math.max(...counts, 1);
+    const labels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    document.getElementById('chartBars').innerHTML = counts.map((c, i) =>
+      `<div class="chart-bar ${i === 5 ? 'active' : ''}" style="height:${Math.max(5, Math.round(c/max*100))}%"></div>`
+    ).join('');
+    document.getElementById('chartLabels').innerHTML = months.map(({ m }) =>
+      `<div class="chart-label">${labels[m]}</div>`
+    ).join('');
+  }
+
+  // ── 포인트 렌더링 ──
+  function renderPoints() {
+    const streak = calcStreak();
+    document.getElementById('pointValue').textContent = state.points.toLocaleString() + ' P';
+    document.getElementById('streakValue').textContent = '🔥 ' + streak + '일';
+
+    const sortedBonus = [...state.bonusRules].sort((a, b) => a.days - b.days);
+    const next = sortedBonus.find(r => streak < r.days);
+    document.getElementById('streakHint').textContent = next
+      ? `${next.days - streak}일 더 읽으면 ${next.days}일 보너스!`
+      : '모든 연속 보너스 달성! 최고예요 🎉';
+
+    const top = state.rewards.reduce((a, b) => (!a || (b.point > a.point && state.points < b.point)) ? b : a, null);
+    if (top) {
+      const pct = Math.min(100, Math.round(state.points / top.point * 100));
+      document.getElementById('pointGoalText').textContent = `목표: ${top.name} (${top.point.toLocaleString()}P) — ${Math.max(0, top.point - state.points).toLocaleString()}P 남았어요`;
+      document.getElementById('progressFill').style.width = pct + '%';
+    }
+
+    renderRuleList();
+    renderBonusRuleList();
+    renderRewardList();
+  }
+
+  function renderRuleList() {
+    const el = document.getElementById('ruleList');
+    el.innerHTML = state.rules.map(r => `
+      <div class="rule-row" style="position:relative;">
+        <div>
+          <div class="rule-name">${r.name}</div>
+          <div class="rule-desc">${r.description || ''}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="rule-point">+${r.point.toLocaleString()} P</div>
+          ${!r.fixed ? `
+            <button onclick="openEditRule(${r.id})" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--sky-dark);">✏️</button>
+            <button onclick="deleteRule(${r.id})" style="background:none;border:none;cursor:pointer;font-size:14px;color:#ef4444;">🗑️</button>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderBonusRuleList() {
+    const el = document.getElementById('bonusRuleList');
+    const streak = calcStreak();
+    const sorted = [...state.bonusRules].sort((a, b) => a.days - b.days);
+    el.innerHTML = sorted.map(r => {
+      const done = streak >= r.days;
+      return `
+        <div class="bonus-row" style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div class="bonus-day">${r.days}일 연속 ${done ? '<span class="bonus-badge done">달성!</span>' : ''}</div>
+            <div class="bonus-status">${done ? '달성 완료' : `${r.days - streak}일 더 남았어요`}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="bonus-point">+${r.point.toLocaleString()} P</div>
+            <button onclick="openEditBonusRule(${r.id})" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--sky-dark);">✏️</button>
+            <button onclick="deleteBonusRule(${r.id})" style="background:none;border:none;cursor:pointer;font-size:14px;color:#ef4444;">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openRuleModal() {
+    document.getElementById('ruleModalTitle').textContent = '📋 규칙 추가';
+    document.getElementById('ruleNameInput').value = '';
+    document.getElementById('ruleDescInput').value = '';
+    document.getElementById('rulePointInput').value = '';
+    document.getElementById('ruleEditId').value = '';
+    openModal('ruleModal');
+  }
+
+  function openEditRule(id) {
+    const r = state.rules.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('ruleModalTitle').textContent = '📋 규칙 수정';
+    document.getElementById('ruleNameInput').value = r.name;
+    document.getElementById('ruleDescInput').value = r.description || '';
+    document.getElementById('rulePointInput').value = r.point;
+    document.getElementById('ruleEditId').value = id;
+    openModal('ruleModal');
+  }
+
+  async function saveRule() {
+    const name = document.getElementById('ruleNameInput').value.trim();
+    const description = document.getElementById('ruleDescInput').value.trim();
+    const point = parseInt(document.getElementById('rulePointInput').value);
+    if (!name || !point) { alert('이름과 포인트를 입력해주세요'); return; }
+    const editId = parseInt(document.getElementById('ruleEditId').value);
+    if (editId) {
+      await sb.from('rules').update({ name, description, point }).eq('id', editId);
+      const idx = state.rules.findIndex(x => x.id === editId);
+      if (idx !== -1) state.rules[idx] = { ...state.rules[idx], name, description, point };
+    } else {
+      const rule = { id: Date.now(), profile_id: currentProfileId, name, description, point, fixed: false };
+      await sb.from('rules').insert(rule);
+      state.rules.push(rule);
+    }
+    closeModal('ruleModal');
+    renderPoints();
+  }
+
+  async function deleteRule(id) {
+    if (!confirm('이 규칙을 삭제할까요?')) return;
+    await sb.from('rules').delete().eq('id', id);
+    state.rules = state.rules.filter(x => x.id !== id);
+    renderPoints();
+  }
+
+  function openBonusRuleModal() {
+    document.getElementById('bonusRuleModalTitle').textContent = '🔥 연속 보너스 추가';
+    document.getElementById('bonusDaysInput').value = '';
+    document.getElementById('bonusPointInput').value = '';
+    document.getElementById('bonusRuleEditId').value = '';
+    openModal('bonusRuleModal');
+  }
+
+  function openEditBonusRule(id) {
+    const r = state.bonusRules.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('bonusRuleModalTitle').textContent = '🔥 연속 보너스 수정';
+    document.getElementById('bonusDaysInput').value = r.days;
+    document.getElementById('bonusPointInput').value = r.point;
+    document.getElementById('bonusRuleEditId').value = id;
+    openModal('bonusRuleModal');
+  }
+
+  async function saveBonusRule() {
+    const days = parseInt(document.getElementById('bonusDaysInput').value);
+    const point = parseInt(document.getElementById('bonusPointInput').value);
+    if (!days || !point) { alert('일수와 포인트를 입력해주세요'); return; }
+    const editId = parseInt(document.getElementById('bonusRuleEditId').value);
+    if (editId) {
+      await sb.from('bonus_rules').update({ days, point }).eq('id', editId);
+      const idx = state.bonusRules.findIndex(x => x.id === editId);
+      if (idx !== -1) state.bonusRules[idx] = { ...state.bonusRules[idx], days, point };
+    } else {
+      const rule = { id: Date.now(), profile_id: currentProfileId, days, point };
+      await sb.from('bonus_rules').insert(rule);
+      state.bonusRules.push(rule);
+    }
+    closeModal('bonusRuleModal');
+    renderPoints();
+  }
+
+  async function deleteBonusRule(id) {
+    if (!confirm('이 연속 보너스 규칙을 삭제할까요?')) return;
+    await sb.from('bonus_rules').delete().eq('id', id);
+    state.bonusRules = state.bonusRules.filter(x => x.id !== id);
+    renderPoints();
+  }
+
+  function renderRewardList() {
+    const el = document.getElementById('rewardList');
+    if (!state.rewards.length) {
+      el.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:14px;">아직 등록된 선물이 없어요<br><span style="font-size:12px;">아래 버튼으로 선물 목표를 추가해보세요 🎁</span></div>';
+      return;
+    }
+    el.innerHTML = state.rewards.map(r => {
+      const done = state.points >= r.point;
+      return `<div class="reward-card">
+        <div><div class="reward-name">${r.name}</div><div class="reward-cond">${r.point.toLocaleString()}P 달성 시</div></div>
+        <div class="reward-badge-pill ${done ? 'done' : ''}">${done ? '달성 ✓' : (r.point - state.points).toLocaleString() + 'P 부족'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function openRewardModal() { openModal('rewardModal'); }
+
+  async function saveReward() {
+    const name = document.getElementById('rewardName').value.trim();
+    const point = parseInt(document.getElementById('rewardPoint').value);
+    if (!name || !point) { alert('선물 이름과 포인트를 입력해주세요'); return; }
+    const reward = { id: Date.now(), profile_id: currentProfileId, name, point };
+    const { error } = await sb.from('rewards').insert(reward);
+    if (error) { alert('저장 실패: ' + error.message); return; }
+    state.rewards.push(reward);
+    closeModal('rewardModal');
+    document.getElementById('rewardName').value = '';
+    document.getElementById('rewardPoint').value = '';
+    renderPoints();
+  }
+
+  // 초기화 — Supabase에서 프로필 로드
+  loadProfiles();
+</script>
+</body>
+</html>
